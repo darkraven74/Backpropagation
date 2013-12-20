@@ -17,7 +17,7 @@ struct neuron
 
 struct layer
 {
-	layer(int size);
+	layer(int size, int inputs);
 	vector<neuron> neurons;
 	int size;
 };
