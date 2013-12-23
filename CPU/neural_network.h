@@ -3,6 +3,7 @@
 
 #include <vector>
 
+
 using namespace std;
 
 
@@ -13,6 +14,7 @@ struct neuron
 	vector<double> delta_weights;
 	double output;
 	double border;
+	int inputs;
 };
 
 struct layer
@@ -26,9 +28,15 @@ class neural_network
 {
 public:
 	neural_network(int inputs, int depth, int hidden_layer_size, int outputs);
+	neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed, double momentum);
+	void teach(vector<pair <vector<double>, vector<double> > > tests);
 
 
 private:
+	void init();
+	void forward_pass(vector<double>& test);
+	void backward_pass();
+
 	vector<layer> layers;
 	int depth;
 	int inputs, outputs;
