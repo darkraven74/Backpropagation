@@ -40,7 +40,7 @@ neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int
 	init();
 }
 
-void neural_network::teach(vector<pair <vector<double>, vector<double> > > tests, double error)
+void neural_network::teach(vector<pair <vector<double>, vector<double> > >& tests, double error)
 {
 	clock_t time = clock();
 	long long count = 0;
@@ -64,7 +64,7 @@ void neural_network::teach(vector<pair <vector<double>, vector<double> > > tests
 	printf("time: %f\n\n", (double)time / CLOCKS_PER_SEC);
 }
 
-vector<double> neural_network::calculate(vector<double> input)
+vector<double> neural_network::calculate(vector<double> const& input)
 {
 	vector<double> anwser(outputs);
 	forward_pass(input);
@@ -85,7 +85,7 @@ void neural_network::init()
 	layers.push_back(layer(outputs, hidden_layer_size));
 }
 
-void neural_network::forward_pass(vector<double>& test)
+void neural_network::forward_pass(vector<double> const& test)
 {
 	for (int i = 0; i < inputs; i++)
 	{
@@ -105,7 +105,7 @@ void neural_network::forward_pass(vector<double>& test)
 	}
 }
 
-void neural_network::backward_pass(vector<double>& test_anwser)
+void neural_network::backward_pass(vector<double> const& test_anwser)
 {
 	test_error = 0;
 	for (int i = 0; i < outputs; i++)
