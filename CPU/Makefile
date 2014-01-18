@@ -1,2 +1,2 @@
 all:
-	g++ main.cpp neural_network.cpp -o main
+	g++ big_test.cpp neural_network.cpp -o big_test

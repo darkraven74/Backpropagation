@@ -8,12 +8,15 @@
 neuron::neuron(int inputs) : inputs(inputs)
 {
 	srand(time(NULL));
-	//border = (double)rand() / (double)RAND_MAX;
-	border = 0;
+	//weights in min_w...max_w
+	double min_w = -0.2;
+	double max_w = 0.2;
 	for (int i = 0; i < inputs; i++) 
 	{
-		weights.push_back((double)rand() / (double)RAND_MAX);
+		weights.push_back((max_w - min_w) * ((double)rand() / (double)RAND_MAX) + min_w);
 	}
+	border = (max_w - min_w) * ((double)rand() / (double)RAND_MAX) + min_w;
+	//border = 0;
 	delta_weights.resize(inputs);
 }
 
@@ -28,24 +31,25 @@ layer::layer(int size, int inputs) : size(size)
 
 neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs)
 	: inputs(inputs), depth(depth), hidden_layer_size(hidden_layer_size),
-	  outputs(outputs), learning_speed(0.5), momentum(0.5)	
+	  outputs(outputs), learning_speed(0.5), momentum(0.5), alpha(1.0)	
 {
 	init();
 }
 
-neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed, double momentum)
+neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed, double momentum,
+	double alpha)
 	: inputs(inputs), depth(depth), hidden_layer_size(hidden_layer_size),
-	  outputs(outputs), learning_speed(learning_speed), momentum(momentum)
+	  outputs(outputs), learning_speed(learning_speed), momentum(momentum), alpha(alpha)
 {
 	init();
 }
 
-void neural_network::teach(vector<pair <vector<double>, vector<double> > >& tests, double error)
+void neural_network::teach(vector<pair <vector<double>, vector<double> > >& tests, double error, int max_iterations)
 {
 	clock_t time = clock();
 	long long count = 0;
 	double curr_error = error + 1;
-	while (curr_error > error)
+	while ((curr_error > error) && (count < max_iterations))
 	{
 		count++;
 		curr_error = 0;
@@ -57,8 +61,9 @@ void neural_network::teach(vector<pair <vector<double>, vector<double> > >& test
 			curr_error += test_error;
 		}
 		curr_error /= tests.size();
-		printf("ERROR: %f\n", curr_error);
+		printf("ERROR: %f        count: %lld\n", curr_error, count);
 	}
+	printf("ERROR: %f\n", curr_error);
 	printf("\ncount: %lld\n", count);
 	time = clock() - time;
 	printf("time: %f\n\n", (double)time / CLOCKS_PER_SEC);
@@ -100,7 +105,7 @@ void neural_network::forward_pass(vector<double> const& test)
 			{
 				arg += (layers[i - 1].neurons[k].output * layers[i].neurons[j].weights[k]);
 			}
-			layers[i].neurons[j].output = 1.0 / (1.0 + exp(-1.0 * arg));
+			layers[i].neurons[j].output = 1.0 / (1.0 + exp(-1.0 * arg * alpha));
 		}
 	}
 }
@@ -112,7 +117,7 @@ void neural_network::backward_pass(vector<double> const& test_anwser)
 	{
 		double curr_out = layers.back().neurons[i].output;
 		test_error += (test_anwser[i] - curr_out) * (test_anwser[i] - curr_out);
-		layers.back().neurons[i].delta = (test_anwser[i] - curr_out) * curr_out * (1.0 - curr_out);  
+		layers.back().neurons[i].delta = (test_anwser[i] - curr_out) * curr_out * (1.0 - curr_out) * alpha;  
 		for (int j = 0; j < layers.back().neurons[i].inputs; j++)
 		{
 			layers.back().neurons[i].delta_weights[j] = momentum * layers.back().neurons[i].delta_weights[j]
@@ -129,7 +134,7 @@ void neural_network::backward_pass(vector<double> const& test_anwser)
 			{
 				sum += layers[i + 1].neurons[k].delta * layers[i + 1].neurons[k].weights[j];
 			}
-			layers[i].neurons[j].delta = sum * layers[i].neurons[j].output * (1.0 - layers[i].neurons[j].output);
+			layers[i].neurons[j].delta = sum * layers[i].neurons[j].output * (1.0 - layers[i].neurons[j].output) * alpha;
 			for (int k = 0; k < layers[i].neurons[j].inputs; k++)
 			{
 				layers[i].neurons[j].delta_weights[k] = momentum * layers[i].neurons[j].delta_weights[k]

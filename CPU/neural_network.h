@@ -27,8 +27,8 @@ class neural_network
 {
 public:
 	neural_network(int inputs, int depth, int hidden_layer_size, int outputs);
-	neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed, double momentum);
-	void teach(vector<pair <vector<double>, vector<double> > >& tests, double error);
+	neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed, double momentum, double alpha);
+	void teach(vector<pair <vector<double>, vector<double> > >& tests, double error, int max_iterations);
 	vector<double> calculate(vector<double> const& input);
 
 
@@ -45,6 +45,7 @@ private:
 	double learning_speed;
 	double momentum;
 	double test_error;
+	double alpha;
 };
 
 #endif // NEURAL_NETWORK_H

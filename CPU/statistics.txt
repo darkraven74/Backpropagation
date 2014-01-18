@@ -1,0 +1,49 @@
+***************************
+avg error 0.08	
+hidden_layer_size = 3;
+2000 runs
+90 s
+1200 errors in tests
+***************************
+avg error 0.067
+hidden_layer_size = 10;
+2000 runs
+300 s
+1200 errors in tests
+***************************
+avg error 0.065
+hidden_layer_size = 15;
+2000 runs
+510 s
+1400 errors in tests
+***************************
+avg error 0.06
+hidden_layer_size = 10;
+1000 runs
+140 s
+1300 errors in tests
+***************************
+avg error 0.059
+hidden_layer_size = 10;
+4000 runs
+648 s
+1300 errors in tests
+***************************
+avg error 0.058
+hidden_layer_size = 25;
+1000 runs
+329 s
+1400 errors in tests
+***************************
+avg error 0.050532
+hidden_layer_size = 10;
+6000 runs
+1016 s
+950 errors in tests //BEST RESULT! 90.55% tests passed
+****************************
+avg error 0.044528
+hidden_layer_size = 10;
+10000 runs
+1657 s
+1100 errors in tests
+****************************
