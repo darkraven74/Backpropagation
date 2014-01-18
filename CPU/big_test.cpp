@@ -34,17 +34,27 @@ int main()
 	int inputs = 141;
 	int outputs = 1;
 	int depth = 3;
-	int hidden_layer_size = 4;
-	double learning_speed = 0.9;
-	double momentum = 0.6;
-	double alpha = 0.001;
+	//int hidden_layer_size = 4;
+	int hidden_layer_size = 20;
+	//double learning_speed = 0.9;
+	//double momentum = 0.6;
+	double learning_speed = 0.1;
+	double momentum = 0.1;
+	//double alpha = 0.001;
+	double alpha = 1;
 
-	double error = 0.08;
-	int max_iterations = 2000;
+	double error = 0.004;
+	int max_iterations = 1000;
+
+	double max_val = 5;
+	double min_freq = 1500;
+
+	//double error = 0.08;
+	//int max_iterations = 2000;
 
 	neural_network net(inputs, depth, hidden_layer_size, outputs, learning_speed, momentum, alpha);
 
-	net.teach(tests, error, max_iterations);
+	net.teach(tests, error, max_iterations, max_val, min_freq);
 
 	freopen("results", "w", stdout);
 	ifstream test_stream("test-set");

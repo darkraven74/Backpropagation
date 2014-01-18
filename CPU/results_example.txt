@@ -1,4 +1,5 @@
 errors: 1182; 88.25 percent of tests passed
+time: 70 s
 
 OK! test id: 1 correct: 1 net_output: 0.750798
 OK! test id: 2 correct: 1 net_output: 0.757793

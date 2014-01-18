@@ -1,0 +1,19 @@
+***************************
+avg error 0.019276	
+hidden_layer_size = 20;
+85 runs
+17 s
+errors: 661; 93.43 percent of tests passed
+***************************
+avg error 0.004917
+hidden_layer_size = 20;
+161 runs
+30 s
+errors: 500; 95.03 percent of tests passed
+***************************
+avg error 0.00328	
+hidden_layer_size = 20;
+200 runs
+40 s
+errors: 471; 95.32 percent of tests passed
+***************************

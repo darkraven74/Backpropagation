@@ -44,8 +44,10 @@ neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int
 	init();
 }
 
-void neural_network::teach(vector<pair <vector<double>, vector<double> > >& tests, double error, int max_iterations)
+void neural_network::teach(vector<pair <vector<double>, vector<double> > >& tests, double error, int max_iterations,
+	double max_val, double min_freq)
 {
+	normalize(tests, max_val, min_freq);
 	clock_t time = clock();
 	long long count = 0;
 	double curr_error = error + 1;
@@ -94,7 +96,7 @@ void neural_network::forward_pass(vector<double> const& test)
 {
 	for (int i = 0; i < inputs; i++)
 	{
-		layers[0].neurons[i].output = test[i];
+		layers[0].neurons[i].output = test[i] / coeff[i];
 	}
 	for (int i = 1; i < depth; i++)
 	{
@@ -150,6 +152,32 @@ void neural_network::backward_pass(vector<double> const& test_anwser)
 			{
 				layers[i].neurons[j].weights[k] += layers[i].neurons[j].delta_weights[k]; 
 			}
+		}
+	}
+}
+
+void neural_network::normalize(vector<pair <vector<double>, vector<double> > > const& tests, double max_val, double min_freq)
+{
+	int n = tests[0].first.size();
+	coeff.resize(n, 1);
+	vector<double> sum(n);
+	vector<int> freq(n);
+	for (int i = 0; i < tests.size(); i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			if (tests[i].first[j] > max_val || tests[i].first[j] < -max_val)
+			{
+				freq[j]++;
+				sum[j] += tests[i].first[j];
+			}
+		}
+	}
+	for (int i = 0; i < n; i++)
+	{
+		if (freq[i] > min_freq)
+		{
+			coeff[i] = 1.0 * sum[i] / freq[i];
 		}
 	}
 }
