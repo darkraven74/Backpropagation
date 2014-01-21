@@ -1,8 +1,8 @@
-#include <stdlib.h>
-#include <time.h>   
+#include <cstdlib>
+#include <ctime>
+#include <cmath>
+#include <cstdio>
 #include <algorithm>
-#include <math.h>
-#include <stdio.h>
 #include "neural_network.h"
 
 neuron::neuron(int inputs) : inputs(inputs)
@@ -28,24 +28,47 @@ layer::layer(int size, int inputs) : size(size)
 	}
 }
 
-
-neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs)
-	: inputs(inputs), depth(depth), hidden_layer_size(hidden_layer_size),
-	  outputs(outputs), learning_speed(0.5), momentum(0.5), alpha(1.0)	
-{
-	init();
-}
-
-neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed, double momentum,
-	double alpha)
+neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed,
+	double momentum, double alpha)
 	: inputs(inputs), depth(depth), hidden_layer_size(hidden_layer_size),
 	  outputs(outputs), learning_speed(learning_speed), momentum(momentum), alpha(alpha)
 {
 	init();
 }
 
-void neural_network::teach(vector<pair <vector<double>, vector<double> > >& tests, double error, int max_iterations,
-	double max_val, double min_freq)
+neural_network::neural_network(std::string file_name)
+{
+	FILE* f = fopen(file_name.c_str(), "r");
+	fscanf(f, "%d %d %d %d", &inputs, &outputs, &depth, &hidden_layer_size);
+	fscanf(f, "%lf %lf %lf %lf\n", &learning_speed, &momentum, &test_error, &alpha);
+	coeff.resize(inputs);
+	for (int i = 0; i < coeff.size(); i++)
+	{
+		fscanf(f, "%lf ", &coeff[i]);
+	}
+	init();
+	for (int i = 0; i < layers.size(); i++)
+	{
+		fscanf(f, "%d", &layers[i].size);
+		for (int j = 0; j < layers[i].neurons.size(); j++)
+		{
+			fscanf(f, "%lf %lf %lf %d", &layers[i].neurons[j].output, &layers[i].neurons[j].border, &layers[i].neurons[j].delta,
+				&layers[i].neurons[j].inputs);
+			for (int k = 0; k < layers[i].neurons[j].weights.size(); k++)
+			{
+				fscanf(f, "%lf ", &layers[i].neurons[j].weights[k]);
+			}
+			for (int k = 0; k < layers[i].neurons[j].delta_weights.size(); k++)
+			{
+				fscanf(f, "%lf ", &layers[i].neurons[j].delta_weights[k]);
+			}
+		}
+	}
+	fclose(f);
+}
+
+void neural_network::teach(std::vector<std::pair <std::vector<double>, std::vector<double> > >& tests, double error,
+	int max_iterations, double max_val, double min_freq)
 {
 	normalize(tests, max_val, min_freq);
 	clock_t time = clock();
@@ -71,15 +94,47 @@ void neural_network::teach(vector<pair <vector<double>, vector<double> > >& test
 	printf("time: %f\n\n", (double)time / CLOCKS_PER_SEC);
 }
 
-vector<double> neural_network::calculate(vector<double> const& input)
+std::vector<double> neural_network::calculate(std::vector<double> const& input)
 {
-	vector<double> anwser(outputs);
+	std::vector<double> anwser(outputs);
 	forward_pass(input);
 	for (int i = 0; i < outputs; i++)
 	{
 		anwser[i] = layers.back().neurons[i].output;
 	}
 	return anwser;
+}
+
+void neural_network::save_to_file(std::string file_name)
+{
+	FILE* f = fopen(file_name.c_str(), "w");
+	fprintf(f, "%d %d %d %d\n", inputs, outputs, depth, hidden_layer_size);
+	fprintf(f, "%f %f %f %f\n", learning_speed, momentum, test_error, alpha);
+	for (int i = 0; i < coeff.size(); i++)
+	{
+		fprintf(f, "%f ", coeff[i]);
+	}
+	fprintf(f, "\n");
+	for (int i = 0; i < layers.size(); i++)
+	{
+		fprintf(f, "%d\n", layers[i].size);
+		for (int j = 0; j < layers[i].neurons.size(); j++)
+		{
+			fprintf(f, "%f %f %f %d\n", layers[i].neurons[j].output, layers[i].neurons[j].border, layers[i].neurons[j].delta,
+				 layers[i].neurons[j].inputs);
+			for (int k = 0; k < layers[i].neurons[j].weights.size(); k++)
+			{
+				fprintf(f, "%f ", layers[i].neurons[j].weights[k]);
+			}
+			fprintf(f, "\n");
+			for (int k = 0; k < layers[i].neurons[j].delta_weights.size(); k++)
+			{
+				fprintf(f, "%f ", layers[i].neurons[j].delta_weights[k]);
+			}
+			fprintf(f, "\n");
+		}
+	}
+	fclose(f);
 }
 
 void neural_network::init()
@@ -92,7 +147,7 @@ void neural_network::init()
 	layers.push_back(layer(outputs, hidden_layer_size));
 }
 
-void neural_network::forward_pass(vector<double> const& test)
+void neural_network::forward_pass(std::vector<double> const& test)
 {
 	for (int i = 0; i < inputs; i++)
 	{
@@ -112,7 +167,7 @@ void neural_network::forward_pass(vector<double> const& test)
 	}
 }
 
-void neural_network::backward_pass(vector<double> const& test_anwser)
+void neural_network::backward_pass(std::vector<double> const& test_anwser)
 {
 	test_error = 0;
 	for (int i = 0; i < outputs; i++)
@@ -156,12 +211,13 @@ void neural_network::backward_pass(vector<double> const& test_anwser)
 	}
 }
 
-void neural_network::normalize(vector<pair <vector<double>, vector<double> > > const& tests, double max_val, double min_freq)
+void neural_network::normalize(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests,
+	double max_val, double min_freq)
 {
 	int n = tests[0].first.size();
 	coeff.resize(n, 1);
-	vector<double> sum(n);
-	vector<int> freq(n);
+	std::vector<double> sum(n);
+	std::vector<int> freq(n);
 	for (int i = 0; i < tests.size(); i++)
 	{
 		for (int j = 0; j < n; j++)
