@@ -222,7 +222,7 @@ void neural_network::normalize(std::vector<std::pair <std::vector<double>, std::
 	{
 		for (int j = 0; j < n; j++)
 		{
-			if (tests[i].first[j] > max_val || tests[i].first[j] < -max_val)
+			if (abs(tests[i].first[j]) > max_val)
 			{
 				freq[j]++;
 				sum[j] += tests[i].first[j];
