@@ -56,7 +56,7 @@ int main()
 	//neural_network net("net.txt");
 
 	net.teach(tests, error, max_iterations, max_val, min_freq);
-	net.save_to_file("net.txt");
+	//net.save_to_file("net.txt");
 
 	freopen("results", "w", stdout);
 	ifstream test_stream("test-set");
