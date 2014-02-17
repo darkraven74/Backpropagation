@@ -7,11 +7,11 @@
 struct layer
 {
 	layer(int size, int inputs);
-	std::vector<double> weights;
-	std::vector<double> delta_weights;
-	std::vector<double> outputs;
-	std::vector<double> borders;
-	std::vector<double> deltas;
+	double* weights;
+	double* delta_weights;
+	double* outputs;
+	double* borders;
+	double* deltas;
 	int inputs;
 	int size;
 };
