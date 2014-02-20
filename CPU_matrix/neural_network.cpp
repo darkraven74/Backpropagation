@@ -80,11 +80,11 @@ void matrix_transpose_cpu(double* a, double* c, int s1, int s2)
 
 layer::layer(int size, int inputs) : size(size), inputs(inputs)
 {
-	weights = (double *)malloc(inputs * size * sizeof(double));
-	delta_weights = (double *)malloc(inputs * size * sizeof(double));
-	outputs = (double *)malloc(size * sizeof(double));
-	deltas = (double *)malloc(size * sizeof(double));
-	borders = (double *)malloc(size * sizeof(double));
+	weights = (double*)malloc(inputs * size * sizeof(double));
+	delta_weights = (double*)malloc(inputs * size * sizeof(double));
+	outputs = (double*)malloc(size * sizeof(double));
+	deltas = (double*)malloc(size * sizeof(double));
+	borders = (double*)malloc(size * sizeof(double));
 	srand(time(NULL));
 	//weights in min_w...max_w
 	double min_w = -0.2;
@@ -96,7 +96,6 @@ layer::layer(int size, int inputs) : size(size), inputs(inputs)
 			weights[j * size + i] = ((max_w - min_w) * ((double)rand() / (double)RAND_MAX) + min_w);
 		}
 		borders[i] = ((max_w - min_w) * ((double)rand() / (double)RAND_MAX) + min_w);
-		//borders.push_back(0);
 	}
 }
 
@@ -108,7 +107,7 @@ neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int
 	init();
 }
 
-/*neural_network::neural_network(std::string file_name)
+neural_network::neural_network(std::string file_name)
 {
 	FILE* f = fopen(file_name.c_str(), "r");
 	fscanf(f, "%d %d %d %d", &inputs, &outputs, &depth, &hidden_layer_size);
@@ -121,23 +120,19 @@ neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int
 	init();
 	for (int i = 0; i < layers.size(); i++)
 	{
-		fscanf(f, "%d", &layers[i].size);
-		for (int j = 0; j < layers[i].neurons.size(); j++)
+		fscanf(f, "%d %d\n", &layers[i].inputs, &layers[i].size);
+		for (int j = 0; j < layers[i].inputs * layers[i].size; j++)
 		{
-			fscanf(f, "%lf %lf %lf %d", &layers[i].neurons[j].output, &layers[i].neurons[j].border, &layers[i].neurons[j].delta,
-				&layers[i].neurons[j].inputs);
-			for (int k = 0; k < layers[i].neurons[j].weights.size(); k++)
-			{
-				fscanf(f, "%lf ", &layers[i].neurons[j].weights[k]);
-			}
-			for (int k = 0; k < layers[i].neurons[j].delta_weights.size(); k++)
-			{
-				fscanf(f, "%lf ", &layers[i].neurons[j].delta_weights[k]);
-			}
+			fscanf(f, "%lf %lf ", &layers[i].weights[j], &layers[i].delta_weights[j]);
+		}
+		fscanf(f, "\n");
+		for (int j = 0; j < layers[i].size; j++)
+		{
+			fscanf(f, "%lf %lf %lf ", &layers[i].outputs[j], &layers[i].borders[j], &layers[i].deltas[j]);
 		}
 	}
 	fclose(f);
-}*/
+}
 
 void neural_network::teach(std::vector<std::pair <std::vector<double>, std::vector<double> > >& tests, double error,
 	int max_iterations, double max_val, double min_freq)
@@ -172,7 +167,7 @@ std::vector<double> neural_network::calculate(std::vector<double> const& input)
 	return std::vector<double> (layers[depth - 1].outputs, layers[depth - 1].outputs + layers[depth - 1].size);
 }
 
-/*void neural_network::save_to_file(std::string file_name)
+void neural_network::save_to_file(std::string file_name)
 {
 	FILE* f = fopen(file_name.c_str(), "w");
 	fprintf(f, "%d %d %d %d\n", inputs, outputs, depth, hidden_layer_size);
@@ -184,25 +179,20 @@ std::vector<double> neural_network::calculate(std::vector<double> const& input)
 	fprintf(f, "\n");
 	for (int i = 0; i < layers.size(); i++)
 	{
-		fprintf(f, "%d\n", layers[i].size);
-		for (int j = 0; j < layers[i].neurons.size(); j++)
+		fprintf(f, "%d %d\n", layers[i].inputs, layers[i].size);
+		for (int j = 0; j < layers[i].inputs * layers[i].size; j++)
 		{
-			fprintf(f, "%f %f %f %d\n", layers[i].neurons[j].output, layers[i].neurons[j].border, layers[i].neurons[j].delta,
-				 layers[i].neurons[j].inputs);
-			for (int k = 0; k < layers[i].neurons[j].weights.size(); k++)
-			{
-				fprintf(f, "%f ", layers[i].neurons[j].weights[k]);
-			}
-			fprintf(f, "\n");
-			for (int k = 0; k < layers[i].neurons[j].delta_weights.size(); k++)
-			{
-				fprintf(f, "%f ", layers[i].neurons[j].delta_weights[k]);
-			}
-			fprintf(f, "\n");
+			fprintf(f, "%f %f ", layers[i].weights[j], layers[i].delta_weights[j]);
 		}
+		fprintf(f, "\n");
+		for (int j = 0; j < layers[i].size; j++)
+		{
+			fprintf(f, "%f %f %f ", layers[i].outputs[j], layers[i].borders[j], layers[i].deltas[j]);
+		}
+		fprintf(f, "\n");
 	}
 	fclose(f);
-}*/
+}
 
 void neural_network::init()
 {
@@ -245,20 +235,18 @@ void neural_network::backward_pass(std::vector<double> const& test_anwser)
 	test_error /= 2;
 	for (int i = depth - 2; i > 0; i--)
 	{
-		double* temp = (double *)malloc(layers[i + 1].size * layers[i + 1].inputs * sizeof(double));
-		double* temp2 = (double *)malloc(layers[i + 1].inputs * sizeof(double));
-		double* temp3 = (double *)malloc(layers[i].size * sizeof(double));
+		double* temp = (double*)malloc(layers[i + 1].size * layers[i + 1].inputs * sizeof(double));
+		double* temp2 = (double*)malloc(layers[i + 1].inputs * sizeof(double));
+		double* temp3 = (double*)malloc(layers[i].size * sizeof(double));
 		matrix_transpose_cpu(layers[i + 1].weights, temp, layers[i + 1].inputs, layers[i + 1].size);
 		matrix_mul_cpu(layers[i + 1].deltas, temp, temp2, 1, layers[i + 1].size, layers[i + 1].inputs);
 		matrix_func_der_cpu(layers[i].outputs, temp3, alpha, layers[i].size);
 		matrix_mul_diagonal_cpu(temp3, temp2, layers[i].deltas, layers[i + 1].inputs);
-
 		double* temp4 = (double *)malloc(layers[i].size * layers[i].inputs * sizeof(double));
 		matrix_mul_cpu(layers[i].delta_weights, momentum, layers[i].delta_weights, layers[i].size * layers[i].inputs);
 		matrix_mul_cpu(layers[i - 1].outputs, layers[i].deltas, temp4, layers[i].inputs, 1, layers[i].size);
 		matrix_mul_cpu(temp4, learning_speed, temp4, layers[i].size * layers[i].inputs);
 		matrix_add_cpu(layers[i].delta_weights, temp4, layers[i].delta_weights, layers[i].inputs, layers[i].size);
-
 		free(temp);
 		free(temp2);
 		free(temp3);
