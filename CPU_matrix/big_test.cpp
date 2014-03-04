@@ -36,11 +36,11 @@ int main()
 	int depth = 3;
 	int hidden_layer_size = 20;
 	double learning_speed = 0.1;
-	double momentum = 0.1;
+	double momentum = 0.4;
 	double alpha = 1;
 
-	double error = 0.004;
-	int max_iterations = 10;
+	double error = 0.025;
+	int max_iterations = 300;
 
 	double max_val = 5;
 	double min_freq = 1500;

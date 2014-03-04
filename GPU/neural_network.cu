@@ -294,13 +294,13 @@ void neural_network::init()
 	layers.push_back(layer(outputs, hidden_layer_size));
 }
 
-__global__ void help_forward_pass_gpu(layer* layers, float* test, float* coeff, int id, int size)
+__global__ void calculate_first_layer(layer* layers, float* test, float* coeff, int id, int size)
 {
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
 	layers[0].outputs[j] = test[id * size + j] / coeff[j];
 }
 
-__global__ void forward_pass_gpu(layer* layers, int i, float alpha)
+__global__ void calculate_layer(layer* layers, int i, float alpha)
 {
 	matrix_mul_gpu(layers[i - 1].outputs, layers[i].weights, layers[i].outputs, 1, layers[i].inputs, layers[i].size);
 	__syncthreads();
@@ -313,19 +313,19 @@ void neural_network::forward_pass(float* tests, int id, int size)
 {
 	dim3 block(BLOCK_SIZE, 1);
 	dim3 grid(1 + size / (1 + BLOCK_SIZE), 1);
-	help_forward_pass_gpu<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), tests,
+	calculate_first_layer<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), tests,
 		thrust::raw_pointer_cast(&coeff[0]), id, size);
 	cudaDeviceSynchronize();
 	block.y = BLOCK_SIZE;
 	grid.x = 1 + max_dim / (1 + BLOCK_SIZE);
 	for (int i = 1; i < depth; i++)
 	{
-		forward_pass_gpu<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), i, alpha);
+		calculate_layer<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), i, alpha);
 		cudaDeviceSynchronize();
 	}
 }
 
-__global__ void help_backward_pass_gpu(layer* layers, float* tests_anwsers, int depth, float alpha, float momentum,
+__global__ void calculate_last_layer(layer* layers, float* tests_anwsers, int depth, float alpha, float momentum,
 	 float learning_speed, float* errors, int id, int size)
 {
 	errors[id] = 0;
@@ -344,27 +344,27 @@ __global__ void help_backward_pass_gpu(layer* layers, float* tests_anwsers, int 
 	errors[id] /= 2;
 }
 
-__global__ void backward_pass_gpu(layer* layers, float* temp, float* temp2, float* temp3, float* temp4,
-	 float alpha, float momentum, float learning_speed, int i)
+__global__ void calculate_layer(layer* layers, float* weights_transposed, float* deltas_mul_weights, float* outputs_der,
+	 float* outputs_mul_deltas, float alpha, float momentum, float learning_speed, int i)
 {
-	matrix_transpose_gpu(layers[i + 1].weights, temp, layers[i + 1].inputs, layers[i + 1].size);
+	matrix_transpose_gpu(layers[i + 1].weights, weights_transposed, layers[i + 1].inputs, layers[i + 1].size);
 	__syncthreads();
-	matrix_mul_gpu(layers[i + 1].deltas, temp, temp2, 1, layers[i + 1].size, layers[i + 1].inputs);
+	matrix_mul_gpu(layers[i + 1].deltas, weights_transposed, deltas_mul_weights, 1, layers[i + 1].size, layers[i + 1].inputs);
 	__syncthreads();
-	matrix_func_der_gpu(layers[i].outputs, temp3, alpha, layers[i].size);
+	matrix_func_der_gpu(layers[i].outputs, outputs_der, alpha, layers[i].size);
 	__syncthreads();
-	matrix_mul_diagonal_gpu(temp3, temp2, layers[i].deltas, layers[i + 1].inputs);
+	matrix_mul_diagonal_gpu(outputs_der, deltas_mul_weights, layers[i].deltas, layers[i + 1].inputs);
 	__syncthreads();
 	matrix_mul_gpu(layers[i].delta_weights, momentum, layers[i].delta_weights, layers[i].inputs, layers[i].size);
 	__syncthreads();
-	matrix_mul_gpu(layers[i - 1].outputs, layers[i].deltas, temp4, layers[i].inputs, 1, layers[i].size);
+	matrix_mul_gpu(layers[i - 1].outputs, layers[i].deltas, outputs_mul_deltas, layers[i].inputs, 1, layers[i].size);
 	__syncthreads();
-	matrix_mul_gpu(temp4, learning_speed, temp4, layers[i].inputs, layers[i].size);
+	matrix_mul_gpu(outputs_mul_deltas, learning_speed, outputs_mul_deltas, layers[i].inputs, layers[i].size);
 	__syncthreads();
-	matrix_add_gpu(layers[i].delta_weights, temp4, layers[i].delta_weights, layers[i].inputs, layers[i].size);
+	matrix_add_gpu(layers[i].delta_weights, outputs_mul_deltas, layers[i].delta_weights, layers[i].inputs, layers[i].size);
 }
 
-__global__ void help2_backward_pass_gpu(layer* layers, int i)
+__global__ void update_weights(layer* layers, int i)
 {
 	matrix_add_gpu(layers[i].weights, layers[i].delta_weights, layers[i].weights, layers[i].inputs, layers[i].size);
 }
@@ -373,7 +373,7 @@ void neural_network::backward_pass(float* tests_anwsers, int id, int size, float
 {
 	dim3 block(1, 1);
 	dim3 grid(1, 1);
-	help_backward_pass_gpu<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), tests_anwsers, depth, alpha,
+	calculate_last_layer<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), tests_anwsers, depth, alpha,
 		momentum, learning_speed, errors, id, size);
 	cudaDeviceSynchronize(); 
 	block.x = BLOCK_SIZE;
@@ -382,25 +382,25 @@ void neural_network::backward_pass(float* tests_anwsers, int id, int size, float
 	grid.y = 1 + max_dim / (1 + BLOCK_SIZE);
 	for (int i = depth - 2; i > 0; i--)
 	{
-		float* temp;
-		float* temp2;
-		float* temp3;
-		float* temp4;
-		cudaMalloc(&temp, outputs * hidden_layer_size * sizeof(float));
-		cudaMalloc(&temp2, hidden_layer_size * sizeof(float));
-		cudaMalloc(&temp3, hidden_layer_size * sizeof(float));
-		cudaMalloc(&temp4, hidden_layer_size * inputs * sizeof(float));
-		backward_pass_gpu<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]),
-			temp, temp2, temp3, temp4, alpha, momentum, learning_speed, i);
+		float* weights_transposed;
+		float* deltas_mul_weights;
+		float* outputs_der;
+		float* outputs_mul_deltas;
+		cudaMalloc(&weights_transposed, outputs * hidden_layer_size * sizeof(float));
+		cudaMalloc(&deltas_mul_weights, hidden_layer_size * sizeof(float));
+		cudaMalloc(&outputs_der, hidden_layer_size * sizeof(float));
+		cudaMalloc(&outputs_mul_deltas, hidden_layer_size * inputs * sizeof(float));
+		calculate_layer<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]),
+			weights_transposed, deltas_mul_weights, outputs_der, outputs_mul_deltas, alpha, momentum, learning_speed, i);
 		cudaDeviceSynchronize();
-		cudaFree(temp);
-		cudaFree(temp2);
-		cudaFree(temp3);
-		cudaFree(temp4);
+		cudaFree(weights_transposed);
+		cudaFree(deltas_mul_weights);
+		cudaFree(outputs_der);
+		cudaFree(outputs_mul_deltas);
 	}
 	for (int i = 1; i < depth; i++)
 	{
-		help2_backward_pass_gpu<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), i);
+		update_weights<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), i);
 		cudaDeviceSynchronize();
 	}
 }
