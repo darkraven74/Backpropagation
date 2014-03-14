@@ -22,7 +22,7 @@ class neural_network
 {
 public:
 	neural_network(int inputs, int depth, int hidden_layer_size, int outputs, float learning_speed = 0.5f,
-		float momentum = 0.5f, float alpha = 1.0f);
+		float momentum = 0.5f, float alpha = 1.0f, float lambda = 0.f);
 	neural_network(std::string file_name);
 	void teach(std::vector<std::pair <std::vector<float>, std::vector<float> > >& tests,
 		float error, int max_iterations, float max_val, float min_freq);
@@ -44,6 +44,8 @@ private:
 	float learning_speed;
 	float momentum;
 	float alpha;
+	float lambda;
+	int tests_size;
 };
 
 #endif // NEURAL_NETWORK_H

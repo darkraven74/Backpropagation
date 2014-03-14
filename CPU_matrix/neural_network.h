@@ -20,7 +20,7 @@ class neural_network
 {
 public:
 	neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed = 0.5,
-		double momentum = 0.5, double alpha = 1.0);
+		double momentum = 0.5, double alpha = 1.0, double lambda = 0);
 	neural_network(std::string file_name);
 	void teach(std::vector<std::pair <std::vector<double>, std::vector<double> > >& tests,
 		double error, int max_iterations, double max_val, double min_freq);
@@ -44,6 +44,8 @@ private:
 	double momentum;
 	double test_error;
 	double alpha;
+	double lambda;
+	double tests_size;
 };
 
 #endif // NEURAL_NETWORK_H

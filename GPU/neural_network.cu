@@ -119,9 +119,9 @@ layer::layer()
 }
 
 neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs, float learning_speed,
-	float momentum, float alpha)
+	float momentum, float alpha, float lambda)
 	: inputs(inputs), depth(depth), hidden_layer_size(hidden_layer_size),
-	  outputs(outputs), learning_speed(learning_speed), momentum(momentum), alpha(alpha)
+	  outputs(outputs), learning_speed(learning_speed), momentum(momentum), alpha(alpha), lambda(lambda)
 {
 	init();
 }
@@ -175,6 +175,7 @@ neural_network::neural_network(std::string file_name)
 void neural_network::teach(std::vector<std::pair <std::vector<float>, std::vector<float> > >& tests, float error,
 	int max_iterations, float max_val, float min_freq)
 {
+	tests_size = tests.size();
 	normalize(tests, max_val, min_freq);
 	clock_t time = clock();
 	long long count = 0;
@@ -326,7 +327,7 @@ void neural_network::forward_pass(float* tests, int id, int size)
 }
 
 __global__ void calculate_last_layer(layer* layers, float* tests_anwsers, int depth, float alpha, float momentum,
-	 float learning_speed, float* errors, int id, int size)
+	 float learning_speed, float* errors, int id, int size, int tests_size, float lambda)
 {
 	errors[id] = 0;
 	for (int i = 0; i < size; i++)
@@ -337,15 +338,17 @@ __global__ void calculate_last_layer(layer* layers, float* tests_anwsers, int de
 		for (int j = 0; j < layers[depth - 1].inputs; j++)
 		{
 			layers[depth - 1].delta_weights[j * layers[depth - 1].size + i] = momentum *
-				layers[depth - 1].delta_weights[j * layers[depth - 1].size + i] + learning_speed * layers[depth - 1].deltas[i] *
-				layers[depth - 2].outputs[j]; 
+				layers[depth - 1].delta_weights[j * layers[depth - 1].size + i] + learning_speed * (layers[depth - 1].deltas[i] *
+				layers[depth - 2].outputs[j] + lambda * 2.0 / tests_size * 
+				layers[depth - 1].weights[j * layers[depth - 1].size + i]); 
 		}
 	}
 	errors[id] /= 2;
 }
 
 __global__ void calculate_layer(layer* layers, float* weights_transposed, float* deltas_mul_weights, float* outputs_der,
-	 float* outputs_mul_deltas, float alpha, float momentum, float learning_speed, int i)
+	 float* outputs_mul_deltas, float* weights_mul_lambda, float alpha, float momentum, float learning_speed, int i,
+	 int tests_size, float lambda)
 {
 	matrix_transpose_gpu(layers[i + 1].weights, weights_transposed, layers[i + 1].inputs, layers[i + 1].size);
 	__syncthreads();
@@ -358,6 +361,10 @@ __global__ void calculate_layer(layer* layers, float* weights_transposed, float*
 	matrix_mul_gpu(layers[i].delta_weights, momentum, layers[i].delta_weights, layers[i].inputs, layers[i].size);
 	__syncthreads();
 	matrix_mul_gpu(layers[i - 1].outputs, layers[i].deltas, outputs_mul_deltas, layers[i].inputs, 1, layers[i].size);
+	__syncthreads();
+	matrix_mul_gpu(layers[i].weights, 2.0 * lambda / tests_size, weights_mul_lambda, layers[i].inputs, layers[i].size);
+	__syncthreads();
+	matrix_add_gpu(weights_mul_lambda, outputs_mul_deltas, outputs_mul_deltas, layers[i].inputs, layers[i].size);
 	__syncthreads();
 	matrix_mul_gpu(outputs_mul_deltas, learning_speed, outputs_mul_deltas, layers[i].inputs, layers[i].size);
 	__syncthreads();
@@ -374,7 +381,7 @@ void neural_network::backward_pass(float* tests_anwsers, int id, int size, float
 	dim3 block(1, 1);
 	dim3 grid(1, 1);
 	calculate_last_layer<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]), tests_anwsers, depth, alpha,
-		momentum, learning_speed, errors, id, size);
+		momentum, learning_speed, errors, id, size, tests_size, lambda);
 	cudaDeviceSynchronize(); 
 	block.x = BLOCK_SIZE;
 	block.y = BLOCK_SIZE;
@@ -386,17 +393,21 @@ void neural_network::backward_pass(float* tests_anwsers, int id, int size, float
 		float* deltas_mul_weights;
 		float* outputs_der;
 		float* outputs_mul_deltas;
+		float* weights_mul_lambda;
 		cudaMalloc(&weights_transposed, outputs * hidden_layer_size * sizeof(float));
 		cudaMalloc(&deltas_mul_weights, hidden_layer_size * sizeof(float));
 		cudaMalloc(&outputs_der, hidden_layer_size * sizeof(float));
 		cudaMalloc(&outputs_mul_deltas, hidden_layer_size * inputs * sizeof(float));
+		cudaMalloc(&weights_mul_lambda, hidden_layer_size * inputs * sizeof(float));
 		calculate_layer<<<grid, block>>>(thrust::raw_pointer_cast(&layers[0]),
-			weights_transposed, deltas_mul_weights, outputs_der, outputs_mul_deltas, alpha, momentum, learning_speed, i);
+			weights_transposed, deltas_mul_weights, outputs_der, outputs_mul_deltas, weights_mul_lambda, alpha,
+			momentum, learning_speed, i, tests_size, lambda);
 		cudaDeviceSynchronize();
 		cudaFree(weights_transposed);
 		cudaFree(deltas_mul_weights);
 		cudaFree(outputs_der);
 		cudaFree(outputs_mul_deltas);
+		cudaFree(weights_mul_lambda);
 	}
 	for (int i = 1; i < depth; i++)
 	{

@@ -33,26 +33,28 @@ int main()
 
 	int inputs = 141;
 	int outputs = 1;
-	int depth = 3;
-	int hidden_layer_size = 20;
+	int depth = 4;
+	int hidden_layer_size = 600;
 	double learning_speed = 0.1;
-	double momentum = 0.4;
+	double momentum = 0.7;
 	double alpha = 1;
+	double lambda = 0;
 
-	double error = 0.025;
-	int max_iterations = 300;
+	double error = 0.01;
+	//double error = 0.025;
+	int max_iterations = 5;
 
-	double max_val = 5;
+	double max_val = 3;
 	double min_freq = 1500;
 
-	neural_network net(inputs, depth, hidden_layer_size, outputs, learning_speed, momentum, alpha);
+	neural_network net(inputs, depth, hidden_layer_size, outputs, learning_speed, momentum, alpha, lambda);
 	//neural_network net("net.txt");
 
 	net.teach(tests, error, max_iterations, max_val, min_freq);
-	//net.save_to_file("net.txt");
+	net.save_to_file("net.txt");
 
 	freopen("results", "w", stdout);
-	ifstream test_stream("test-set");
+	ifstream test_stream("train-set");
 	int test_id = 1;
 	int error_count = 0;
 	vector<int> sum(2);
@@ -92,15 +94,16 @@ int main()
 		test_id++;
 	}
 	double tests_passed = 100.0 * (test_id - error_count) / test_id;
-	printf("\nerrors: %d; %.2f percent of tests passed\n\n", error_count, tests_passed);
+	char* percent = "%";
+	printf("\nerrors: %d; %.2f%s tests passed ", error_count, tests_passed, percent);
 	for (int i = 0; i < 2; i++)
 	{
 		p[i] = 1.0 * sum_net_correct[i] / sum_net[i];
 		r[i] = 1.0 * sum_net_correct[i] / sum[i];
 		f1[i] = 1.0 * ((2.0 * p[i] * r[i]) / (p[i] + r[i]));
 	}
-	printf("p[0]: %f r[0]: %f \n", p[0], r[0]);
-	printf("p[1]: %f r[1]: %f \n", p[1], r[1]);
-	printf("f1[0]: %f f1[1]: %f\n", f1[0], f1[1]);
+	printf("p[0]: %.3f r[0]: %.3f             ", p[0], r[0]);
+	printf("p[1]: %.3f r[1]: %.3f             ", p[1], r[1]);
+	printf("f1[0]: %.3f f1[1]: %.3f", f1[0], f1[1]);
 	return 0;
 }

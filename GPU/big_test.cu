@@ -38,6 +38,7 @@ int main()
 	float learning_speed = 0.1f;
 	float momentum = 0.1f;
 	float alpha = 1;
+	float lambda = 0.5f;
 
 	float error = 0.004f;
 	int max_iterations = 10;

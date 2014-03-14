@@ -100,9 +100,9 @@ layer::layer(int size, int inputs) : size(size), inputs(inputs)
 }
 
 neural_network::neural_network(int inputs, int depth, int hidden_layer_size, int outputs, double learning_speed,
-	double momentum, double alpha)
+	double momentum, double alpha, double lambda)
 	: inputs(inputs), depth(depth), hidden_layer_size(hidden_layer_size),
-	  outputs(outputs), learning_speed(learning_speed), momentum(momentum), alpha(alpha)
+	  outputs(outputs), learning_speed(learning_speed), momentum(momentum), alpha(alpha), lambda(lambda)
 {
 	init();
 }
@@ -137,6 +137,7 @@ neural_network::neural_network(std::string file_name)
 void neural_network::teach(std::vector<std::pair <std::vector<double>, std::vector<double> > >& tests, double error,
 	int max_iterations, double max_val, double min_freq)
 {
+	tests_size = tests.size();
 	normalize(tests, max_val, min_freq);
 	clock_t time = clock();
 	long long count = 0;
@@ -229,7 +230,8 @@ void neural_network::backward_pass(std::vector<double> const& test_anwser)
 		for (int j = 0; j < layers.back().inputs; j++)
 		{
 			layers.back().delta_weights[j * layers.back().size + i] = momentum * layers.back().delta_weights[j * layers.back().size + i]
-			+ learning_speed * layers.back().deltas[i] * layers[depth - 2].outputs[j]; 
+			+ learning_speed * (layers.back().deltas[i] * layers[depth - 2].outputs[j] + lambda * 2.0 / tests_size * 
+				layers.back().weights[j * layers.back().size + i]); 
 		}
 	}
 	test_error /= 2;
@@ -243,14 +245,18 @@ void neural_network::backward_pass(std::vector<double> const& test_anwser)
 		matrix_func_der_cpu(layers[i].outputs, temp3, alpha, layers[i].size);
 		matrix_mul_diagonal_cpu(temp3, temp2, layers[i].deltas, layers[i + 1].inputs);
 		double* temp4 = (double *)malloc(layers[i].size * layers[i].inputs * sizeof(double));
+		double* temp5 = (double *)malloc(layers[i].size * layers[i].inputs * sizeof(double));
 		matrix_mul_cpu(layers[i].delta_weights, momentum, layers[i].delta_weights, layers[i].size * layers[i].inputs);
 		matrix_mul_cpu(layers[i - 1].outputs, layers[i].deltas, temp4, layers[i].inputs, 1, layers[i].size);
+		matrix_mul_cpu(layers[i].weights, 2.0 * lambda / tests_size, temp5, layers[i].size * layers[i].inputs);
+		matrix_add_cpu(temp4, temp5, temp4, layers[i].inputs, layers[i].size);
 		matrix_mul_cpu(temp4, learning_speed, temp4, layers[i].size * layers[i].inputs);
 		matrix_add_cpu(layers[i].delta_weights, temp4, layers[i].delta_weights, layers[i].inputs, layers[i].size);
 		free(temp);
 		free(temp2);
 		free(temp3);
 		free(temp4);
+		free(temp5);
 	}
 	for (int i = 1; i < depth; i++)
 	{
