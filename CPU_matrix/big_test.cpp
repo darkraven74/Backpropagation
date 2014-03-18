@@ -33,28 +33,29 @@ int main()
 
 	int inputs = 141;
 	int outputs = 1;
-	int depth = 4;
-	int hidden_layer_size = 600;
+	int depth = 3;
+	int hidden_layer_size = 20;
 	double learning_speed = 0.1;
-	double momentum = 0.7;
+	double momentum = 0.6;
 	double alpha = 1;
 	double lambda = 0;
+	//double lambda = 0.5;
 
 	double error = 0.01;
 	//double error = 0.025;
-	int max_iterations = 5;
+	int max_iterations = 15;
 
-	double max_val = 3;
+	double max_val = 5;
 	double min_freq = 1500;
 
 	neural_network net(inputs, depth, hidden_layer_size, outputs, learning_speed, momentum, alpha, lambda);
 	//neural_network net("net.txt");
 
 	net.teach(tests, error, max_iterations, max_val, min_freq);
-	net.save_to_file("net.txt");
+	//net.save_to_file("net.txt");
 
 	freopen("results", "w", stdout);
-	ifstream test_stream("train-set");
+	ifstream test_stream("test-set");
 	int test_id = 1;
 	int error_count = 0;
 	vector<int> sum(2);

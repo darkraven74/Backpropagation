@@ -179,30 +179,41 @@ void neural_network::teach(std::vector<std::pair <std::vector<float>, std::vecto
 	normalize(tests, max_val, min_freq);
 	clock_t time = clock();
 	long long count = 0;
+	float min_w = -0.2;
+	float max_w = 0.2;
 	float curr_error = error + 1;
 	while ((curr_error > error) && (count < max_iterations))
 	{
 		count++;
 		curr_error = 0;
 		random_shuffle(tests.begin(), tests.end());
-		float* tests_h = (float*)malloc(tests.size() * tests[0].first.size() * sizeof(float));
-		float* tests_anwsers_h = (float*)malloc(tests.size() * tests[0].second.size() * sizeof(float));
-		for (int i = 0; i < tests.size(); i++)
+		std::vector<std::pair <std::vector<float>, std::vector<float> > > tests_noise = tests;
+		for (int i = 0; i < tests_noise.size(); i++)
 		{
-			copy(tests[i].first.begin(), tests[i].first.end(), tests_h + i * tests[0].first.size());
-			copy(tests[i].second.begin(), tests[i].second.end(), tests_anwsers_h + i * tests[0].second.size());
+			for (int j = 0; j < tests_noise[i].first.size(); j++)
+			{
+				tests_noise[i].first[j] += ((max_w - min_w) * ((float)rand() / (float)RAND_MAX) + min_w);
+			}
+		}
+		float* tests_h = (float*)malloc(tests_noise.size() * tests_noise[0].first.size() * sizeof(float));
+		float* tests_anwsers_h = (float*)malloc(tests_noise.size() * tests_noise[0].second.size() * sizeof(float));
+		for (int i = 0; i < tests_noise.size(); i++)
+		{
+			copy(tests_noise[i].first.begin(), tests_noise[i].first.end(), tests_h + i * tests_noise[0].first.size());
+			copy(tests_noise[i].second.begin(), tests_noise[i].second.end(), tests_anwsers_h + i * tests_noise[0].second.size());
 		}
 		float* tests_d;
 		float* tests_anwsers_d;
-		cudaMalloc(&tests_d, tests.size() * tests[0].first.size() * sizeof(float));
-		cudaMalloc(&tests_anwsers_d, tests.size() * tests[0].second.size() * sizeof(float));
-		cudaMemcpy(tests_d, tests_h, tests.size() * tests[0].first.size() * sizeof(float), cudaMemcpyHostToDevice);
-		cudaMemcpy(tests_anwsers_d, tests_anwsers_h, tests.size() * tests[0].second.size() * sizeof(float), cudaMemcpyHostToDevice);
-		thrust::device_vector<float> errors_d(tests.size());
-		for (int i = 0; i < tests.size(); i++)
+		cudaMalloc(&tests_d, tests_noise.size() * tests_noise[0].first.size() * sizeof(float));
+		cudaMalloc(&tests_anwsers_d, tests_noise.size() * tests_noise[0].second.size() * sizeof(float));
+		cudaMemcpy(tests_d, tests_h, tests_noise.size() * tests_noise[0].first.size() * sizeof(float), cudaMemcpyHostToDevice);
+		cudaMemcpy(tests_anwsers_d, tests_anwsers_h, tests_noise.size() * tests_noise[0].second.size() * sizeof(float),
+			cudaMemcpyHostToDevice);
+		thrust::device_vector<float> errors_d(tests_noise.size());
+		for (int i = 0; i < tests_noise.size(); i++)
 		{
-			forward_pass(tests_d, i, tests[0].first.size());
-			backward_pass(tests_anwsers_d, i, tests[0].second.size(), thrust::raw_pointer_cast(&errors_d[0]));
+			forward_pass(tests_d, i, tests_noise[0].first.size());
+			backward_pass(tests_anwsers_d, i, tests_noise[0].second.size(), thrust::raw_pointer_cast(&errors_d[0]));
 		}
 		cudaDeviceSynchronize();
 		thrust::host_vector<float> errors_h = errors_d;
