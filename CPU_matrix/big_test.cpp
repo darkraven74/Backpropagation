@@ -34,16 +34,16 @@ int main()
 	int inputs = 141;
 	int outputs = 1;
 	int depth = 3;
-	int hidden_layer_size = 20;
+	int hidden_layer_size = 600;
 	double learning_speed = 0.1;
-	double momentum = 0.6;
+	double momentum = 0.1;
 	double alpha = 1;
 	double lambda = 0;
 	//double lambda = 0.5;
 
-	double error = 0.01;
+	double error = 0.0001;
 	//double error = 0.025;
-	int max_iterations = 15;
+	int max_iterations = 3;
 
 	double max_val = 5;
 	double min_freq = 1500;
@@ -106,5 +106,9 @@ int main()
 	printf("p[0]: %.3f r[0]: %.3f             ", p[0], r[0]);
 	printf("p[1]: %.3f r[1]: %.3f             ", p[1], r[1]);
 	printf("f1[0]: %.3f f1[1]: %.3f", f1[0], f1[1]);
+	double p_avg = 1.0 * (p[0] + p[1]) / 2;
+	double r_avg = 1.0 * (r[0] + r[1]) / 2;
+	double f1_avg = (2.0 * r_avg * p_avg) / (r_avg + p_avg);
+	printf("\nf1_avg: %.5f", f1_avg);
 	return 0;
 }

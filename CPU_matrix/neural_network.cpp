@@ -149,18 +149,20 @@ void neural_network::teach(std::vector<std::pair <std::vector<double>, std::vect
 		count++;
 		curr_error = 0;
 		random_shuffle(tests.begin(), tests.end());
-		std::vector<std::pair <std::vector<double>, std::vector<double> > > tests_noise = tests;
-		for (int i = 0; i < tests_noise.size(); i++)
+		//std::vector<std::pair <std::vector<double>, std::vector<double> > > tests_noise = tests;
+		/*for (int i = 0; i < tests_noise.size(); i++)
 		{
 			for (int j = 0; j < tests_noise[i].first.size(); j++)
 			{
 				tests_noise[i].first[j] += ((max_w - min_w) * ((double)rand() / (double)RAND_MAX) + min_w);
 			}
-		}
-		for (int i = 0; i < tests_noise.size(); i++)
+		}*/
+		for (int i = 0; i < tests.size(); i++)
 		{
-			forward_pass(tests_noise[i].first);
-			backward_pass(tests_noise[i].second);
+			//forward_pass(tests_noise[i].first);
+			//backward_pass(tests_noise[i].second);
+			forward_pass(tests[i].first);
+			backward_pass(tests[i].second);
 			curr_error += test_error;
 		}
 		curr_error /= tests.size();

@@ -103,5 +103,9 @@ int main()
 	printf("p[0]: %f r[0]: %f \n", p[0], r[0]);
 	printf("p[1]: %f r[1]: %f \n", p[1], r[1]);
 	printf("f1[0]: %f f1[1]: %f\n", f1[0], f1[1]);
+	float p_avg = 1.0 * (p[0] + p[1]) / 2;
+	float r_avg = 1.0 * (r[0] + r[1]) / 2;
+	float f1_avg = (2.0 * r_avg * p_avg) / (r_avg + p_avg);
+	printf("\nf1_avg: %.5f", f1_avg);
 	return 0;
 }
