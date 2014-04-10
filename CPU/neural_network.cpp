@@ -9,8 +9,8 @@ neuron::neuron(int inputs) : inputs(inputs)
 {
 	srand(time(NULL));
 	//weights in min_w...max_w
-	double min_w = -0.2;
-	double max_w = 0.2;
+ 	double min_w = inputs ? -1.0 / sqrt(1.0 * inputs) : -1.0;
+ 	double max_w = inputs ? 1.0 / sqrt(1.0 * inputs) : 1.0;
 	for (int i = 0; i < inputs; i++) 
 	{
 		weights.push_back((max_w - min_w) * ((double)rand() / (double)RAND_MAX) + min_w);
@@ -41,10 +41,10 @@ neural_network::neural_network(std::string file_name)
 	FILE* f = fopen(file_name.c_str(), "r");
 	fscanf(f, "%d %d %d %d", &inputs, &outputs, &depth, &hidden_layer_size);
 	fscanf(f, "%lf %lf %lf %lf\n", &learning_speed, &momentum, &test_error, &alpha);
-	coeff.resize(inputs);
-	for (int i = 0; i < coeff.size(); i++)
+	variance.resize(inputs);
+	for (int i = 0; i < variance.size(); i++)
 	{
-		fscanf(f, "%lf ", &coeff[i]);
+		fscanf(f, "%lf ", &variance[i]);
 	}
 	init();
 	for (int i = 0; i < layers.size(); i++)
@@ -70,7 +70,7 @@ neural_network::neural_network(std::string file_name)
 void neural_network::teach(std::vector<std::pair <std::vector<double>, std::vector<double> > >& tests, double error,
 	int max_iterations, double max_val, double min_freq)
 {
-	normalize(tests, max_val, min_freq);
+	normalize(tests);
 	clock_t time = clock();
 	long long count = 0;
 	double curr_error = error + 1;
@@ -110,9 +110,9 @@ void neural_network::save_to_file(std::string file_name)
 	FILE* f = fopen(file_name.c_str(), "w");
 	fprintf(f, "%d %d %d %d\n", inputs, outputs, depth, hidden_layer_size);
 	fprintf(f, "%f %f %f %f\n", learning_speed, momentum, test_error, alpha);
-	for (int i = 0; i < coeff.size(); i++)
+	for (int i = 0; i < variance.size(); i++)
 	{
-		fprintf(f, "%f ", coeff[i]);
+		fprintf(f, "%f ", variance[i]);
 	}
 	fprintf(f, "\n");
 	for (int i = 0; i < layers.size(); i++)
@@ -151,20 +151,40 @@ void neural_network::forward_pass(std::vector<double> const& test)
 {
 	for (int i = 0; i < inputs; i++)
 	{
-		layers[0].neurons[i].output = test[i] / coeff[i];
+		layers[0].neurons[i].output = test[i] - average[i];
+		if (variance[i] > 1.0)
+		{
+			layers[0].neurons[i].output /= (1.0 * variance[i]);
+		}
 	}
+	/*for (int i = 0; i < inputs; i++)
+	{
+		layers[0].neurons[i].output = test[i] / variance[i];
+	}*/
+	double arg;
 	for (int i = 1; i < depth; i++)
 	{
 		for (int j = 0; j < layers[i].size; j++)
 		{
-			double arg = layers[i].neurons[j].border;
+			arg = layers[i].neurons[j].border;
 			for (int k = 0; k < layers[i].neurons[j].inputs; k++)
 			{
 				arg += (layers[i - 1].neurons[k].output * layers[i].neurons[j].weights[k]);
 			}
-			layers[i].neurons[j].output = 1.0 / (1.0 + exp(-1.0 * arg * alpha));
+			arg /= (1.0 * layers[i].neurons[j].inputs);
+			layers[i].neurons[j].output = 1.0 * 1.7159 * tanh(1.0 * 2.0 / 3.0 * arg);
 		}
 	}
+	/*for (int i = 0; i < depth - 1; i++)
+	{
+		for (int j = 0; j < layers[i].size; j++)
+		{
+			if (layers[i].neurons[j].output > 1.0) {
+				//printf("BAD! ");
+				//printf("layer: %d id: %d out: %.3f\n", i + 1, j + 1, layers[i].neurons[j].output);
+			}
+		}
+	}*/
 }
 
 void neural_network::backward_pass(std::vector<double> const& test_anwser)
@@ -174,7 +194,7 @@ void neural_network::backward_pass(std::vector<double> const& test_anwser)
 	{
 		double curr_out = layers.back().neurons[i].output;
 		test_error += (test_anwser[i] - curr_out) * (test_anwser[i] - curr_out);
-		layers.back().neurons[i].delta = (test_anwser[i] - curr_out) * curr_out * (1.0 - curr_out) * alpha;  
+		layers.back().neurons[i].delta = (test_anwser[i] - curr_out) * (1.7159 - curr_out) * (1.7159 + curr_out) * 2.0 / 3.0 / 1.7159;  
 		for (int j = 0; j < layers.back().neurons[i].inputs; j++)
 		{
 			layers.back().neurons[i].delta_weights[j] = momentum * layers.back().neurons[i].delta_weights[j]
@@ -191,7 +211,7 @@ void neural_network::backward_pass(std::vector<double> const& test_anwser)
 			{
 				sum += layers[i + 1].neurons[k].delta * layers[i + 1].neurons[k].weights[j];
 			}
-			layers[i].neurons[j].delta = sum * layers[i].neurons[j].output * (1.0 - layers[i].neurons[j].output) * alpha;
+			layers[i].neurons[j].delta = 1.0 * sum * 2.0 / 3.0 / 1.7159 * (1.7159 - layers[i].neurons[j].output) * (1.7159 + layers[i].neurons[j].output);
 			for (int k = 0; k < layers[i].neurons[j].inputs; k++)
 			{
 				layers[i].neurons[j].delta_weights[k] = momentum * layers[i].neurons[j].delta_weights[k]
@@ -211,11 +231,11 @@ void neural_network::backward_pass(std::vector<double> const& test_anwser)
 	}
 }
 
-void neural_network::normalize(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests,
+void neural_network::normalize_old(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests,
 	double max_val, double min_freq)
 {
 	int n = tests[0].first.size();
-	coeff.resize(n, 1);
+	variance.resize(n, 1);
 	std::vector<double> sum(n);
 	std::vector<int> freq(n);
 	for (int i = 0; i < tests.size(); i++)
@@ -233,7 +253,37 @@ void neural_network::normalize(std::vector<std::pair <std::vector<double>, std::
 	{
 		if (freq[i] > min_freq)
 		{
-			coeff[i] = 1.0 * sum[i] / freq[i];
+			variance[i] = 1.0 * sum[i] / freq[i];
 		}
+	}
+}
+
+void neural_network::normalize(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests)
+{
+	int n = tests[0].first.size();
+	variance.resize(n, 0);
+	average.resize(n, 0);
+	for (int i = 0; i < tests.size(); i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			average[j] += tests[i].first[j];
+		}
+	}
+	for (int i = 0; i < n; i++)
+	{
+		average[i] /= (1.0 * tests.size());
+	}
+	for (int i = 0; i < tests.size(); i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			variance[j] += ((tests[i].first[j] - average[j]) * (tests[i].first[j] - average[j]));
+		}
+	}
+	for (int i = 0; i < n; i++)
+	{
+		variance[i] /= (1.0 * tests.size());
+		//variance[i] = sqrt(variance[i]);
 	}
 }

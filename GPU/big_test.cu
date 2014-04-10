@@ -33,23 +33,27 @@ int main()
 
 	int inputs = 141;
 	int outputs = 1;
-	int depth = 3;
-	int hidden_layer_size = 20;
-	float learning_speed = 0.1f;
+	int depth = 5;
+ 	int hidden_layer_size = 100;
+ 	float learning_speed = 0.01;
+ 	float learning_add = 0.005;
 	float momentum = 0.1f;
-	float alpha = 1;
-	float lambda = 0.5f;
+	float momentum_sub = 0.01;
+	float alpha = 1.7159;
+	float beta = 2.0 / 3.0;
+	float lambda = 0.3;
 
 	float error = 0.004f;
 	int max_iterations = 10;
 
-	float max_val = 5;
-	float min_freq = 1500;
+	//float max_val = 5;
+	//float min_freq = 1500;
 
-	neural_network net(inputs, depth, hidden_layer_size, outputs, learning_speed, momentum, alpha);
+	neural_network net(inputs, depth, hidden_layer_size, outputs, learning_speed, learning_add, momentum,
+		momentum_sub, alpha, beta, lambda);
 	//neural_network net("net.txt");
 
-	net.teach(tests, error, max_iterations, max_val, min_freq);
+	net.teach(tests, error, max_iterations);
 	//net.save_to_file("net.txt");
 
 	freopen("results", "w", stdout);
@@ -78,17 +82,25 @@ int main()
 		}
 		vector<float> net_ans = net.calculate(test);
 		float round_ans = floor(net_ans[0] + 0.5f);
+		if (round_ans < 0.0)
+ 		{
+ 			round_ans = 0;
+ 		}
+ 		if (round_ans > 1.0)
+ 		{
+ 			round_ans = 1;
+ 		}
 		sum_net[(int)round_ans]++;	
 				
 		if ((int)round_ans != (int)ans[0])
 		{
-			printf("ERROR! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
+			//printf("ERROR! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
 			error_count++;
 		}
 		else
 		{
 			sum_net_correct[(int)round_ans]++;
-			printf("OK! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
+			//printf("OK! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
 		}
 		test_id++;
 	}

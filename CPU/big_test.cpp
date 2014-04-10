@@ -35,7 +35,7 @@ int main()
 	int outputs = 1;
 	int depth = 3;
 	//int hidden_layer_size = 4;
-	int hidden_layer_size = 600;
+	int hidden_layer_size = 20;
 	//double learning_speed = 0.9;
 	//double momentum = 0.6;
 	double learning_speed = 0.1;
@@ -44,7 +44,7 @@ int main()
 	double alpha = 1;
 
 	double error = 0.00004;
-	int max_iterations = 5;
+	int max_iterations = 50;
 
 	double max_val = 5;
 	double min_freq = 1500;
@@ -84,17 +84,21 @@ int main()
 		}
 		vector<double> net_ans = net.calculate(test);
 		double round_ans = floor(net_ans[0] + 0.5);
+		if (round_ans < 0.0)
+			round_ans = 0;
+		if (round_ans > 1.0)
+			round_ans = 1;
 		sum_net[(int)round_ans]++;	
 				
 		if ((int)round_ans != (int)ans[0])
 		{
-			printf("ERROR! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
+			//printf("ERROR! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
 			error_count++;
 		}
 		else
 		{
 			sum_net_correct[(int)round_ans]++;
-			printf("OK! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
+			//printf("OK! test id: %d correct: %d net_output: %f\n", test_id, (int)ans[0], net_ans[0]);
 		}
 		test_id++;
 	}
@@ -109,5 +113,9 @@ int main()
 	printf("p[0]: %f r[0]: %f \n", p[0], r[0]);
 	printf("p[1]: %f r[1]: %f \n", p[1], r[1]);
 	printf("f1[0]: %f f1[1]: %f\n", f1[0], f1[1]);
+	double p_avg = 1.0 * (p[0] + p[1]) / 2;
+	double r_avg = 1.0 * (r[0] + r[1]) / 2;
+	double f1_avg = (2.0 * r_avg * p_avg) / (r_avg + p_avg);
+	printf("\nf1_avg: %.5f", f1_avg);
 	return 0;
 }

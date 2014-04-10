@@ -38,9 +38,11 @@ private:
 	void init();
 	void forward_pass(std::vector<double> const& test);
 	void backward_pass(std::vector<double> const& test_anwser);
-	void normalize(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests, double max_val, double min_freq);
+	void normalize(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests);
+	void normalize_old(std::vector<std::pair <std::vector<double>, std::vector<double> > > const& tests, double max_val, double min_freq);
 
-	std::vector<double> coeff;
+	std::vector<double> variance;
+	std::vector<double> average;
 	std::vector<layer> layers;
 	int inputs;
 	int outputs;
